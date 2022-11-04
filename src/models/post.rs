@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
-    id: u64,
-    board: String,
-    title: String,
-    content: String,
-    pinned: bool,
-    moderator: bool,
-    locked: bool,
-    parent: u64,
-    image: u64,
+    pub id: u64,
+    pub board: String,
+    pub title: String,
+    pub content: Option<String>,
+    pub pinned: bool,
+    pub moderator: bool,
+    pub locked: bool,
+    pub parent: Option<u64>,
+    pub image: Option<u64>,
 }
