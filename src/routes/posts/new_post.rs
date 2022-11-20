@@ -12,7 +12,7 @@ use crate::{
 
 #[post("/<board>/new", data = "<post>")]
 pub async fn new<'a>(
-    board: String,
+    board: &str,
     post: Form<PostForm<'a>>,
     gen: &State<Mutex<IdGen>>,
     mut db: Connection<DB>,
