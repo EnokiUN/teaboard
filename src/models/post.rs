@@ -2,23 +2,34 @@ use rocket::{fs::TempFile, response::status::NotFound, serde::json::Json};
 use rocket_db_pools::sqlx::{pool::PoolConnection, MySql};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
 use tokio::sync::Mutex;
 
 use crate::id::IdGen;
 
 use super::Board;
 
+#[serde_as]
+#[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
+    #[serde_as(as = "DisplayFromStr")]
     pub id: u64,
     pub board: String,
     pub title: String,
     pub content: Option<String>,
+    #[serde(skip_serializing_if = "is_false")]
     pub pinned: bool,
+    #[serde(skip_serializing_if = "is_false")]
     pub moderator: bool,
+    #[serde(skip_serializing_if = "is_false")]
     pub locked: bool,
     pub parent: Option<u64>,
     pub image: Option<u64>,
+}
+
+fn is_false(foo: &bool) -> bool {
+    !foo
 }
 
 #[derive(Debug, Serialize, Deserialize)]
