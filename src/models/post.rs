@@ -72,4 +72,22 @@ VALUES(?, ?, ?, ?, ?, ?)
         }
     }
 
+    pub async fn get(
+        id: u64,
+        db: &mut PoolConnection<MySql>,
+    ) -> Result<Post, NotFound<Json<Value>>> {
+        // https://github.com/launchbadge/sqlx/issues/877
+        sqlx::query_as!(
+            Self,
+            r#"
+SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
+FROM posts
+WHERE id = ?
+            "#,
+            id
+        )
+        .fetch_one(db)
+        .await
+        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))
+    }
 }
