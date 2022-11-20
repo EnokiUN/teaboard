@@ -14,11 +14,11 @@ use rocket_db_pools::{deadpool_redis::Pool, sqlx::MySqlPool, Database};
 
 #[derive(Database)]
 #[database("db")]
-struct DB(MySqlPool);
+pub struct DB(MySqlPool);
 
 #[derive(Database)]
 #[database("cache")]
-struct Cache(Pool);
+pub struct Cache(Pool);
 
 #[launch]
 async fn launch() -> Rocket<Build> {
