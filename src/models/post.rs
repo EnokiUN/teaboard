@@ -62,10 +62,15 @@ impl Post {
         form: PostForm<'a>,
         gen: &Mutex<IdGen>,
         db: &mut PoolConnection<MySql>,
-    ) -> Self {
+    ) -> Result<Post, NotFound<Json<Value>>> {
         let _image = form.image;
         let post = form.post.into_inner();
         let id = gen.lock().await.generate();
+        if let Some(parent) = post.parent {
+            Self::get(parent, db)
+                .await
+                .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown parent post"}))))?;
+        }
         sqlx::query!(
             "
 INSERT INTO posts(id, board, title, content, parent, image)
@@ -81,7 +86,7 @@ VALUES(?, ?, ?, ?, ?, ?)
         .execute(db)
         .await
         .unwrap();
-        Self {
+        Ok(Self {
             id,
             board: board.id,
             title: post.title,
@@ -91,7 +96,7 @@ VALUES(?, ?, ?, ?, ?, ?)
             locked: false,
             parent: post.parent,
             image: None,
-        }
+        })
     }
 
     pub async fn get(
