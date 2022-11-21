@@ -117,4 +117,46 @@ WHERE id = ?
         .await
         .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))
     }
+
+    pub async fn info(
+        id: u64,
+        db: &mut PoolConnection<MySql>,
+    ) -> Result<PostInfo, NotFound<Json<Value>>> {
+        let post = Self::get(id, db).await?;
+        let replies = sqlx::query_as!(
+            Self,
+            r#"
+SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
+FROM posts
+WHERE parent = ?
+            "#,
+            id
+        )
+        .fetch_all(db)
+        .await
+        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))?;
+        Ok(PostInfo { post, replies })
+    }
+
+    pub async fn partial_info(
+        id: u64,
+        db: &mut PoolConnection<MySql>,
+    ) -> Result<PostInfo, NotFound<Json<Value>>> {
+        let post = Self::get(id, db).await?;
+        let replies = sqlx::query_as!(
+            Self,
+            r#"
+SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
+FROM posts
+WHERE parent = ?
+ORDER BY id DESC
+LIMIT 5
+            "#,
+            id
+        )
+        .fetch_all(db)
+        .await
+        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))?;
+        Ok(PostInfo { post, replies })
+    }
 }
