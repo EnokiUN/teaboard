@@ -30,6 +30,13 @@ pub struct Post {
     pub image: Option<u64>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostInfo {
+    #[serde(flatten)]
+    pub post: Post,
+    pub replies: Vec<Post>,
+}
+
 fn is_false(foo: &bool) -> bool {
     !foo
 }
