@@ -1,0 +1,8 @@
+version: "3"
+
+services:
+  teaboard:
+    build: .
+
+    ports:
+      - "7158:7158"
