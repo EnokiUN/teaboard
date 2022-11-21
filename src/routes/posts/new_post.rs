@@ -18,7 +18,7 @@ pub async fn new<'a>(
     mut db: Connection<DB>,
 ) -> Result<Json<Post>, NotFound<Json<Value>>> {
     let board = Board::get(board, &mut *db).await?;
-    Ok(Json(
-        Post::create(board, post.into_inner(), gen.inner(), &mut *db).await,
-    ))
+    Post::create(board, post.into_inner(), gen.inner(), &mut *db)
+        .await
+        .map(|p| Json(p))
 }
