@@ -3,7 +3,7 @@ use rocket_db_pools::Connection;
 use serde_json::Value;
 
 use crate::{
-    models::{Board, Post},
+    models::{Board, PostInfo},
     DB,
 };
 
@@ -13,7 +13,7 @@ pub async fn feed(
     before: Option<u64>,
     limit: Option<u32>,
     mut db: Connection<DB>,
-) -> Result<Json<Vec<Post>>, NotFound<Json<Value>>> {
+) -> Result<Json<Vec<PostInfo>>, NotFound<Json<Value>>> {
     Board::get_feed(board, before, limit, &mut *db)
         .await
         .map(|p| Json(p))
