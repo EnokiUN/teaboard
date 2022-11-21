@@ -24,7 +24,9 @@ pub struct Post {
     pub moderator: bool,
     #[serde(skip_serializing_if = "is_false")]
     pub locked: bool,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub parent: Option<u64>,
+    #[serde_as(as = " Option<DisplayFromStr>")]
     pub image: Option<u64>,
 }
 
@@ -32,10 +34,12 @@ fn is_false(foo: &bool) -> bool {
     !foo
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostJson {
     pub title: String,
     pub content: Option<String>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub parent: Option<u64>,
 }
 
