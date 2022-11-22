@@ -1,6 +1,4 @@
-use rocket::{
-    form::Form, response::status::NotFound, serde::json::Json, tokio::sync::Mutex, State,
-};
+use rocket::{form::Form, http::Status, serde::json::Json, tokio::sync::Mutex, State};
 use rocket_db_pools::Connection;
 use serde_json::Value;
 
@@ -16,8 +14,10 @@ pub async fn new<'a>(
     post: Form<PostForm<'a>>,
     gen: &State<Mutex<IdGen>>,
     mut db: Connection<DB>,
-) -> Result<Json<Post>, NotFound<Json<Value>>> {
-    let board = Board::get(board, &mut *db).await?;
+) -> Result<Json<Post>, (Status, Json<Value>)> {
+    let board = Board::get(board, &mut *db)
+        .await
+        .map_err(|e| (Status::NotFound, e.0))?;
     Post::create(board, post.into_inner(), gen.inner(), &mut *db)
         .await
         .map(|p| Json(p))
