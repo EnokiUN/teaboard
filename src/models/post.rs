@@ -94,7 +94,7 @@ WHERE hash = ?
                             "image/gif" | "image/jpeg" | "image/png" | "image/webp" | "video/mp4" | "video/webm" | "video/quicktime" => {}
                             _ => {
                                 fs::remove_dir(path).unwrap();
-                                return Err((Status::BadRequest, Json(json!({"status":400,"msg":"Only major image and video formats are supported"}))))
+                                return Err((Status::BadRequest, Json(json!({"status": 400, "msg": "Only major image and video formats are supported"}))))
                             }
                         }
                         Ok(Image {
@@ -131,7 +131,7 @@ VALUES(?, ?, ?, ?)
             Self::get(parent, db).await.map_err(|_| {
                 (
                     Status::NotFound,
-                    Json(json!({"code": 404, "msg": "Unknown parent post"})),
+                    Json(json!({"status": 404, "msg": "Unknown parent post"})),
                 )
             })?;
         }
@@ -179,7 +179,7 @@ WHERE id = ?
         )
         .fetch_one(db)
         .await
-        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))
+        .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))
     }
 
     pub async fn info(
@@ -198,7 +198,7 @@ WHERE parent = ?
         )
         .fetch_all(db)
         .await
-        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))?;
+        .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
         Ok(PostInfo { post, replies })
     }
 
@@ -220,7 +220,7 @@ LIMIT 5
         )
         .fetch_all(db)
         .await
-        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown post"}))))?;
+        .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
         Ok(PostInfo { post, replies })
     }
 }

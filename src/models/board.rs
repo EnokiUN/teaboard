@@ -26,7 +26,7 @@ WHERE id = ?",
         )
         .fetch_one(db)
         .await
-        .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown board"}))))
+        .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown board"}))))
     }
     pub async fn get_feed(
         id: String,
