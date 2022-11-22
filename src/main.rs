@@ -9,7 +9,11 @@ use std::env;
 
 use id::IdGen;
 
-use rocket::{tokio::sync::Mutex, Build, Config, Rocket};
+use rocket::{
+    data::{Limits, ToByteUnit},
+    tokio::sync::Mutex,
+    Build, Config, Rocket,
+};
 use rocket_db_pools::{deadpool_redis::Pool, sqlx::MySqlPool, Database};
 
 #[derive(Database)]
@@ -27,6 +31,11 @@ async fn launch() -> Rocket<Build> {
     env_logger::init();
 
     let config = Config::figment()
+        .merge((
+            "limit",
+            Limits::default().limit("data-form", 20.mebibytes()),
+        ))
+        .merge(("temp_dir", "./data"))
         .merge((
             "databases.db",
             rocket_db_pools::Config {
