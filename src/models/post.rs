@@ -1,4 +1,6 @@
-use rocket::{fs::TempFile, response::status::NotFound, serde::json::Json};
+use std::{fs, path::PathBuf};
+
+use rocket::{fs::TempFile, http::Status, response::status::NotFound, serde::json::Json};
 use rocket_db_pools::sqlx::{pool::PoolConnection, MySql};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -7,7 +9,7 @@ use tokio::sync::Mutex;
 
 use crate::id::IdGen;
 
-use super::Board;
+use super::{Board, Image};
 
 #[serde_as]
 #[skip_serializing_none]
@@ -26,7 +28,7 @@ pub struct Post {
     pub locked: bool,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub parent: Option<u64>,
-    #[serde_as(as = " Option<DisplayFromStr>")]
+    #[serde_as(as = "Option<DisplayFromStr>")]
     pub image: Option<u64>,
 }
 
@@ -62,14 +64,76 @@ impl Post {
         form: PostForm<'a>,
         gen: &Mutex<IdGen>,
         db: &mut PoolConnection<MySql>,
-    ) -> Result<Post, NotFound<Json<Value>>> {
-        let _image = form.image;
+    ) -> Result<Post, (Status, Json<Value>)> {
+        let image: Option<u64> = match form.image {
+            Some(mut image) => {
+                let id = gen.lock().await.generate();
+                let path = PathBuf::from(format!("./data/{}", id));
+                let name = image.name().unwrap().to_string();
+                image.persist_to(&path).await.unwrap();
+
+                let hash = sha256::try_digest(path.as_path()).unwrap();
+                if let Ok(img) = sqlx::query_as!(
+                    Image,
+                    "
+SELECT *
+FROM images
+WHERE hash = ?
+                    ",
+                    hash,
+                )
+                .fetch_one(&mut *db)
+                .await
+                {
+                    tokio::fs::remove_file(path).await.unwrap();
+                    Some(img.id)
+                } else {
+                    let img = tokio::task::spawn_blocking(move || {
+                        let mime = tree_magic::from_filepath(path.as_path());
+                        match mime.as_ref() {
+                            "image/gif" | "image/jpeg" | "image/png" | "image/webp" | "video/mp4" | "video/webm" | "video/quicktime" => {}
+                            _ => {
+                                fs::remove_dir(path).unwrap();
+                                return Err((Status::BadRequest, Json(json!({"status":400,"msg":"Only major image and video formats are supported"}))))
+                            }
+                        }
+                        Ok(Image {
+                            id,
+                            name,
+                            content_type: mime,
+                            hash
+                        })
+                    })
+                    .await
+                    .unwrap()?;
+                    sqlx::query!(
+                        "
+INSERT INTO images(id, name, content_type, hash)
+VALUES(?, ?, ?, ?)
+                        ",
+                        img.id,
+                        img.name,
+                        img.content_type,
+                        img.hash
+                    )
+                    .execute(&mut *db)
+                    .await
+                    .unwrap();
+
+                    Some(img.id)
+                }
+            }
+            None => None,
+        };
         let post = form.post.into_inner();
         let id = gen.lock().await.generate();
         if let Some(parent) = post.parent {
-            Self::get(parent, db)
-                .await
-                .map_err(|_| NotFound(Json(json!({"code": 404, "msg": "Unknown parent post"}))))?;
+            Self::get(parent, db).await.map_err(|_| {
+                (
+                    Status::NotFound,
+                    Json(json!({"code": 404, "msg": "Unknown parent post"})),
+                )
+            })?;
         }
         sqlx::query!(
             "
@@ -81,7 +145,7 @@ VALUES(?, ?, ?, ?, ?, ?)
             post.title,
             post.content,
             post.parent,
-            None::<u32>
+            image
         )
         .execute(db)
         .await
@@ -95,7 +159,7 @@ VALUES(?, ?, ?, ?, ?, ?)
             moderator: false,
             locked: false,
             parent: post.parent,
-            image: None,
+            image,
         })
     }
 
