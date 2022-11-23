@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS mentions (
+    post BIGINT UNSIGNED NOT NULL,
+    mentioned_post BIGINT UNSIGNED NOT NULL,
+)
