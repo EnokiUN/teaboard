@@ -28,6 +28,19 @@ WHERE id = ?",
         .await
         .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown board"}))))
     }
+
+    pub async fn all(db: &mut PoolConnection<MySql>) -> Vec<Board> {
+        sqlx::query_as!(
+            Self,
+            "
+SELECT * FROM boards
+            "
+        )
+        .fetch_all(db)
+        .await
+        .unwrap()
+    }
+
     pub async fn get_feed(
         id: String,
         before: Option<u64>,
