@@ -32,8 +32,10 @@ async fn launch() -> Rocket<Build> {
 
     let config = Config::figment()
         .merge((
-            "limit",
-            Limits::default().limit("data-form", 20.mebibytes()),
+            "limits",
+            Limits::default()
+                .limit("data-form", 20.mebibytes())
+                .limit("file", 20.mebibytes()),
         ))
         .merge(("temp_dir", "./data"))
         .merge((
