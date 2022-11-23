@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use rocket::{fs::TempFile, http::Status, response::status::NotFound, serde::json::Json};
 use rocket_db_pools::sqlx::{pool::PoolConnection, MySql};
 use serde::{Deserialize, Serialize};
@@ -30,11 +32,16 @@ pub struct Post {
     pub image: Option<u64>,
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostInfo {
     #[serde(flatten)]
     pub post: Post,
     pub replies: Vec<Post>,
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub mentions: Vec<u64>,
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub mentioned_posts: Vec<u64>,
 }
 
 fn is_false(foo: &bool) -> bool {
@@ -63,6 +70,9 @@ impl Post {
         gen: &Mutex<IdGen>,
         db: &mut PoolConnection<MySql>,
     ) -> Result<Post, (Status, Json<Value>)> {
+        lazy_static! {
+            pub static ref MENTION_REGEX: Regex = Regex::new(r">>(\d{9,12})").unwrap();
+        }
         let image: Option<u64> = match form.image {
             Some(image) => Some(Image::create(image, &gen, &mut *db).await?.id),
             None => None,
@@ -89,9 +99,28 @@ VALUES(?, ?, ?, ?, ?, ?)
             post.parent,
             image
         )
-        .execute(db)
+        .execute(&mut *db)
         .await
         .unwrap();
+        if let Some(content) = &post.content {
+            for capture in MENTION_REGEX.captures_iter(content) {
+                if let Ok(post) =
+                    Self::get(capture.get(1).unwrap().as_str().parse().unwrap(), &mut *db).await
+                {
+                    sqlx::query!(
+                        "
+INSERT INTO mentions(post, mentioned_post)
+VALUES(?, ?)
+                        ",
+                        post.id,
+                        id
+                    )
+                    .execute(&mut *db)
+                    .await
+                    .unwrap();
+                }
+            }
+        }
         Ok(Self {
             id,
             board: board.id,
@@ -135,13 +164,48 @@ WHERE id = ?
 SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
 FROM posts
 WHERE parent = ?
+ORDER BY id ASC
             "#,
+            id
+        )
+        .fetch_all(&mut *db)
+        .await
+        .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
+        let mentions = sqlx::query!(
+            "
+SELECT post
+FROM mentions
+WHERE mentioned_post = ?
+            ",
+            id
+        )
+        .fetch_all(&mut *db)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|m| m.post)
+        .collect();
+        let mentioned_posts = sqlx::query!(
+            "
+SELECT mentioned_post
+FROM mentions
+WHERE post = ?
+            ",
             id
         )
         .fetch_all(db)
         .await
-        .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
-        Ok(PostInfo { post, replies })
+        .unwrap()
+        .into_iter()
+        .map(|m| m.mentioned_post)
+        .collect();
+
+        Ok(PostInfo {
+            post,
+            replies,
+            mentions,
+            mentioned_posts,
+        })
     }
 
     pub async fn partial_info(
@@ -155,14 +219,48 @@ WHERE parent = ?
 SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
 FROM posts
 WHERE parent = ?
-ORDER BY id DESC
+ORDER BY id ASC
 LIMIT 5
             "#,
             id
         )
-        .fetch_all(db)
+        .fetch_all(&mut *db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
-        Ok(PostInfo { post, replies })
+        let mentions = sqlx::query!(
+            "
+SELECT post
+FROM mentions
+WHERE mentioned_post = ?
+            ",
+            id
+        )
+        .fetch_all(&mut *db)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|m| m.post)
+        .collect();
+        let mentioned_posts = sqlx::query!(
+            "
+SELECT mentioned_post
+FROM mentions
+WHERE post = ?
+            ",
+            id
+        )
+        .fetch_all(db)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|m| m.mentioned_post)
+        .collect();
+
+        Ok(PostInfo {
+            post,
+            replies,
+            mentions,
+            mentioned_posts,
+        })
     }
 }
