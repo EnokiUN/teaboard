@@ -1,5 +1,3 @@
-use std::{fs, path::PathBuf};
-
 use rocket::{fs::TempFile, http::Status, response::status::NotFound, serde::json::Json};
 use rocket_db_pools::sqlx::{pool::PoolConnection, MySql};
 use serde::{Deserialize, Serialize};
@@ -66,63 +64,7 @@ impl Post {
         db: &mut PoolConnection<MySql>,
     ) -> Result<Post, (Status, Json<Value>)> {
         let image: Option<u64> = match form.image {
-            Some(mut image) => {
-                let id = gen.lock().await.generate();
-                let path = PathBuf::from(format!("./data/{}", id));
-                let name = image.name().unwrap().to_string();
-                image.persist_to(&path).await.unwrap();
-
-                let hash = sha256::try_digest(path.as_path()).unwrap();
-                if let Ok(img) = sqlx::query_as!(
-                    Image,
-                    "
-SELECT *
-FROM images
-WHERE hash = ?
-                    ",
-                    hash,
-                )
-                .fetch_one(&mut *db)
-                .await
-                {
-                    tokio::fs::remove_file(path).await.unwrap();
-                    Some(img.id)
-                } else {
-                    let img = tokio::task::spawn_blocking(move || {
-                        let mime = tree_magic::from_filepath(path.as_path());
-                        match mime.as_ref() {
-                            "image/gif" | "image/jpeg" | "image/png" | "image/webp" | "video/mp4" | "video/webm" | "video/quicktime" => {}
-                            _ => {
-                                fs::remove_dir(path).unwrap();
-                                return Err((Status::BadRequest, Json(json!({"status": 400, "msg": "Only major image and video formats are supported"}))))
-                            }
-                        }
-                        Ok(Image {
-                            id,
-                            name,
-                            content_type: mime,
-                            hash
-                        })
-                    })
-                    .await
-                    .unwrap()?;
-                    sqlx::query!(
-                        "
-INSERT INTO images(id, name, content_type, hash)
-VALUES(?, ?, ?, ?)
-                        ",
-                        img.id,
-                        img.name,
-                        img.content_type,
-                        img.hash
-                    )
-                    .execute(&mut *db)
-                    .await
-                    .unwrap();
-
-                    Some(img.id)
-                }
-            }
+            Some(image) => Some(Image::create(image, &gen, &mut *db).await?.id),
             None => None,
         };
         let post = form.post.into_inner();
