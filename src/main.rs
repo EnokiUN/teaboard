@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
+mod cors;
 mod id;
 mod models;
 mod routes;
@@ -65,5 +66,6 @@ async fn launch() -> Rocket<Build> {
         .manage(Mutex::new(IdGen::new()))
         .attach(DB::init())
         .attach(Cache::init())
+        .attach(cors::Cors)
         .mount("/", routes::routes())
 }
