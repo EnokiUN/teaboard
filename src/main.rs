@@ -4,6 +4,7 @@ extern crate rocket;
 mod cors;
 mod id;
 mod models;
+mod ratelimit;
 mod routes;
 
 use std::env;
