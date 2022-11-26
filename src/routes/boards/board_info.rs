@@ -20,5 +20,5 @@ pub async fn info(
     let mut ratelimiter =
         Ratelimiter::new(&format!("info-{}", board), ip, 5, Duration::from_secs(10));
     ratelimiter.process_ratelimit(&mut cache).await?;
-    ratelimiter.wrap_response(Board::get(board, &mut *db).await.map(|p| Json(p)))
+    ratelimiter.wrap_response(Board::get(board, &mut db).await.map(Json))
 }

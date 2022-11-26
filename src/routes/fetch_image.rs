@@ -19,5 +19,5 @@ pub async fn fetch_image<'a>(
 ) -> Response<Result<FetchResponse<'a>, NotFound<Json<Value>>>> {
     let mut ratelimiter = Ratelimiter::new("fetch-image", ip, 2, Duration::from_secs(5));
     ratelimiter.process_ratelimit(&mut cache).await?;
-    ratelimiter.wrap_response(Image::get(id, &mut *db).await)
+    ratelimiter.wrap_response(Image::get(id, &mut db).await)
 }

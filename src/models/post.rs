@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_lazy_evaluations)] // FormForm macro does this, nothing I can do about
+                                                // it sadly
 use lazy_static::lazy_static;
 use regex::Regex;
 use rocket::{fs::TempFile, http::Status, response::status::NotFound, serde::json::Json};
@@ -44,8 +46,8 @@ pub struct PostInfo {
     pub mentioned_posts: Vec<u64>,
 }
 
-fn is_false(foo: &bool) -> bool {
-    !foo
+fn is_false(value: &bool) -> bool {
+    !value
 }
 
 #[serde_as]
@@ -74,7 +76,7 @@ impl Post {
             pub static ref MENTION_REGEX: Regex = Regex::new(r">>(\d{9,12})").unwrap();
         }
         let image: Option<u64> = match form.image {
-            Some(image) => Some(Image::create(image, &gen, &mut *db).await?.id),
+            Some(image) => Some(Image::create(image, gen, &mut *db).await?.id),
             None => None,
         };
         let post = form.post.into_inner();

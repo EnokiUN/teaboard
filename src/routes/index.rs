@@ -21,6 +21,6 @@ pub async fn index(
     ratelimiter.process_ratelimit(&mut cache).await?;
     ratelimiter.wrap_response(Json(InstanceInfo {
         info: conf.inner().clone(),
-        boards: Board::all(&mut *db).await,
+        boards: Board::all(&mut db).await,
     }))
 }

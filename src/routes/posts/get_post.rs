@@ -19,5 +19,5 @@ pub async fn get(
 ) -> Response<Result<Json<PostInfo>, NotFound<Json<Value>>>> {
     let mut ratelimiter = Ratelimiter::new("fetch-post", ip, 10, Duration::from_secs(5));
     ratelimiter.process_ratelimit(&mut cache).await?;
-    ratelimiter.wrap_response(Post::info(id, &mut *db).await.map(|p| Json(p)))
+    ratelimiter.wrap_response(Post::info(id, &mut db).await.map(Json))
 }

@@ -22,13 +22,13 @@ pub async fn new<'a>(
 ) -> Response<Result<Json<Post>, (Status, Json<Value>)>> {
     let mut ratelimiter = Ratelimiter::new("create-post", ip, 1, Duration::from_secs(30));
     ratelimiter.process_ratelimit(&mut cache).await?;
-    let board = match Board::get(board, &mut *db).await {
+    let board = match Board::get(board, &mut db).await {
         Ok(board) => board,
         Err(err) => return ratelimiter.wrap_response(Err((Status::NotFound, err.0))),
     };
     ratelimiter.wrap_response(
-        Post::create(board, post.into_inner(), gen.inner(), &mut *db)
+        Post::create(board, post.into_inner(), gen.inner(), &mut db)
             .await
-            .map(|p| Json(p)),
+            .map(Json),
     )
 }

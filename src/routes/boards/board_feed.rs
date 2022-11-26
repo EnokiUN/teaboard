@@ -23,8 +23,8 @@ pub async fn feed(
         Ratelimiter::new(&format!("feed-{}", board), ip, 5, Duration::from_secs(10));
     ratelimiter.process_ratelimit(&mut cache).await?;
     ratelimiter.wrap_response(
-        Board::get_feed(board, before, limit, &mut *db)
+        Board::get_feed(board, before, limit, &mut db)
             .await
-            .map(|p| Json(p)),
+            .map(Json),
     )
 }
