@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
+mod conf;
 mod cors;
 mod id;
 mod models;
@@ -64,6 +65,7 @@ async fn launch() -> Rocket<Build> {
 
     rocket::custom(config)
         .manage(Mutex::new(IdGen::new()))
+        .manage(conf::Conf::new_from_env().expect("Could not read instance config"))
         .attach(DB::init())
         .attach(Cache::init())
         .attach(cors::Cors)
