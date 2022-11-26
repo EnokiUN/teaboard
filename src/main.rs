@@ -10,6 +10,7 @@ mod routes;
 
 use std::env;
 
+use anyhow::Context;
 use id::IdGen;
 
 use rocket::{
@@ -27,8 +28,8 @@ pub struct DB(MySqlPool);
 #[database("cache")]
 pub struct Cache(Pool);
 
-#[launch]
-async fn launch() -> Rocket<Build> {
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
     dotenvy::dotenv().ok();
     env_logger::init();
 
@@ -44,7 +45,7 @@ async fn launch() -> Rocket<Build> {
             "databases.db",
             rocket_db_pools::Config {
                 url: env::var("DATABASE_URL")
-                    .expect("Could not find \"DATABASE_URL\" environment variable"),
+                    .context("Could not find \"DATABASE_URL\" environment variable")?,
                 min_connections: None,
                 max_connections: 1024,
                 connect_timeout: 3,
@@ -55,7 +56,7 @@ async fn launch() -> Rocket<Build> {
             "databases.cache",
             rocket_db_pools::Config {
                 url: env::var("REDIS_URL")
-                    .expect("Could not find \"REDIS_URL\" environment variable"),
+                    .context("Could not find \"REDIS_URL\" environment variable")?,
                 min_connections: None,
                 max_connections: 1024,
                 connect_timeout: 3,
@@ -63,11 +64,16 @@ async fn launch() -> Rocket<Build> {
             },
         ));
 
-    rocket::custom(config)
+    let _ = rocket::custom(config)
         .manage(Mutex::new(IdGen::new()))
-        .manage(conf::Conf::new_from_env().expect("Could not read instance config"))
+        .manage(conf::Conf::new_from_env()?)
         .attach(DB::init())
         .attach(Cache::init())
         .attach(cors::Cors)
         .mount("/", routes::routes())
+        .launch()
+        .await
+        .context("Failed to start rest API")?;
+
+    Ok(())
 }
