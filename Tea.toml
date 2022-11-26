@@ -1,0 +1,6 @@
+# An example Tea.toml
+# You can change where teaboard looks for this file using the CONFIG_PATH
+# environment variable
+
+name = "" # Rquired
+# description = "" # Optional
