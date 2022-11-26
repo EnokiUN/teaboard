@@ -22,7 +22,6 @@ use rocket_db_pools::{deadpool_redis::Pool, sqlx::MySqlPool, Database};
 #[database("db")]
 pub struct DB(MySqlPool);
 
-// TODO: implement ratelimiting
 #[derive(Database)]
 #[database("cache")]
 pub struct Cache(Pool);
