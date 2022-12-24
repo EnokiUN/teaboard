@@ -11,6 +11,8 @@ pub fn routes() -> Vec<Route> {
         index::index,
         posts::new,
         posts::get,
+        posts::pin,
+        posts::lock,
         boards::info,
         boards::feed,
         fetch_image::fetch_image,

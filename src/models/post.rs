@@ -83,12 +83,18 @@ impl Post {
         let post = form.post.into_inner();
         let id = gen.lock().await.generate();
         if let Some(parent) = post.parent {
-            Self::get(parent, db).await.map_err(|_| {
+            let parent = Self::get(parent, db).await.map_err(|_| {
                 (
                     Status::NotFound,
                     Json(json!({"status": 404, "msg": "Unknown parent post"})),
                 )
             })?;
+            if parent.locked && !moderator {
+                return Err((
+                    Status::Forbidden,
+                    Json(json!({"status": 403, "msg": "This post is already locked"})),
+                ));
+            }
         }
         sqlx::query!(
             "
@@ -284,4 +290,22 @@ WHERE id = ?
         Ok(())
     }
 
+    pub async fn lock(
+        id: u64,
+        db: &mut PoolConnection<MySql>,
+    ) -> Result<(), NotFound<Json<Value>>> {
+        Self::get(id, db).await?;
+        sqlx::query!(
+            "
+UPDATE posts
+SET locked = TRUE
+WHERE id = ?
+            ",
+            id
+        )
+        .execute(db)
+        .await
+        .unwrap();
+        Ok(())
+    }
 }
