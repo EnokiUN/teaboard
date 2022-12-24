@@ -4,3 +4,4 @@
 
 name = "" # Rquired
 # description = "" # Optional
+password = "" # Required
