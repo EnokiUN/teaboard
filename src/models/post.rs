@@ -71,6 +71,7 @@ impl Post {
         form: PostForm<'a>,
         gen: &Mutex<IdGen>,
         db: &mut PoolConnection<MySql>,
+        moderator: bool,
     ) -> Result<Post, (Status, Json<Value>)> {
         lazy_static! {
             pub static ref MENTION_REGEX: Regex = Regex::new(r">>(\d{9,12})").unwrap();
@@ -91,13 +92,14 @@ impl Post {
         }
         sqlx::query!(
             "
-INSERT INTO posts(id, board, title, content, parent, image)
-VALUES(?, ?, ?, ?, ?, ?)
+INSERT INTO posts(id, board, title, content, moderator, parent, image)
+VALUES(?, ?, ?, ?, ?, ?, ?)
             ",
             id,
             board.id,
             post.title,
             post.content,
+            moderator,
             post.parent,
             image
         )
@@ -129,7 +131,7 @@ VALUES(?, ?)
             title: post.title,
             content: post.content,
             pinned: false,
-            moderator: false,
+            moderator,
             locked: false,
             parent: post.parent,
             image,
