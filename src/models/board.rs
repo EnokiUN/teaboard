@@ -131,4 +131,32 @@ WHERE id = ?
         .unwrap();
         Ok(())
     }
+
+    pub async fn delete(
+        id: &str,
+        db: &mut PoolConnection<MySql>,
+    ) -> Result<(), NotFound<Json<Value>>> {
+        Self::get(&id, &mut *db).await?;
+        sqlx::query!(
+            "
+DELETE FROM posts
+WHERE board = ?
+            ",
+            id
+        )
+        .execute(&mut *db)
+        .await
+        .unwrap();
+        sqlx::query!(
+            "
+DELETE FROM boards
+WHERE id = ?
+            ",
+            id
+        )
+        .execute(db)
+        .await
+        .unwrap();
+        Ok(())
+    }
 }

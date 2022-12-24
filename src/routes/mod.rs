@@ -15,6 +15,9 @@ pub fn routes() -> Vec<Route> {
         posts::lock,
         boards::info,
         boards::feed,
+        boards::create,
+        boards::edit,
+        boards::delete,
         fetch_image::fetch_image,
         admin::is_admin,
     ]
