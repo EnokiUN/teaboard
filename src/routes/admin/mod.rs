@@ -4,7 +4,7 @@ use rocket::serde::json::Json;
 use rocket_db_pools::Connection;
 
 use crate::{
-    auth::{PasswordAuth, StrictPasswordAuth},
+    auth::PasswordAuth,
     ratelimit::{ClientIP, Ratelimiter, Response},
     Cache,
 };
