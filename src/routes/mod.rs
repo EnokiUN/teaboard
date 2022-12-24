@@ -1,5 +1,6 @@
 use rocket::{routes, Route};
 
+mod admin;
 mod boards;
 mod fetch_image;
 mod index;
@@ -12,6 +13,7 @@ pub fn routes() -> Vec<Route> {
         posts::get,
         boards::info,
         boards::feed,
-        fetch_image::fetch_image
+        fetch_image::fetch_image,
+        admin::is_admin,
     ]
 }
