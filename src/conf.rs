@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct Conf {
     pub name: String,
     pub description: Option<String>,
+    pub password: String,
 }
 
 impl Conf {
