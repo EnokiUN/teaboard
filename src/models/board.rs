@@ -95,4 +95,19 @@ LIMIT ?
         }
         Ok(infos)
     }
+
+    pub async fn create(data: Self, db: &mut PoolConnection<MySql>) -> Self {
+        sqlx::query!(
+            "
+INSERT INTO boards(id, description)
+VALUES(?, ?)
+            ",
+            data.id,
+            data.description,
+        )
+        .execute(db)
+        .await
+        .unwrap();
+        data
+    }
 }
