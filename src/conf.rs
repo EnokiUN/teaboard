@@ -29,6 +29,12 @@ impl Conf {
                 bail!("Instance description cannot be more than 2000 characters long");
             }
         }
+        if conf.password.is_empty() {
+            bail!("Instance password cannot be empty");
+        }
+        if conf.password.len() < 8 {
+            bail!("Instance password cannot be less than 8 characters long");
+        }
         Ok(conf)
     }
 }
