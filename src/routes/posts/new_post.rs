@@ -5,6 +5,7 @@ use rocket_db_pools::Connection;
 use serde_json::Value;
 
 use crate::{
+    auth::PasswordAuth,
     id::IdGen,
     models::{Board, Post, PostForm},
     ratelimit::{ClientIP, Ratelimiter, Response},
@@ -19,6 +20,7 @@ pub async fn new<'a>(
     mut db: Connection<DB>,
     mut cache: Connection<Cache>,
     ip: ClientIP,
+    auth: PasswordAuth,
 ) -> Response<Result<Json<Post>, (Status, Json<Value>)>> {
     let mut ratelimiter = Ratelimiter::new("create-post", ip, 1, Duration::from_secs(30));
     ratelimiter.process_ratelimit(&mut cache).await?;
@@ -27,7 +29,7 @@ pub async fn new<'a>(
         Err(err) => return ratelimiter.wrap_response(Err((Status::NotFound, err.0))),
     };
     ratelimiter.wrap_response(
-        Post::create(board, post.into_inner(), gen.inner(), &mut db)
+        Post::create(board, post.into_inner(), gen.inner(), &mut db, auth.admin)
             .await
             .map(Json),
     )
