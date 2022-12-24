@@ -267,4 +267,21 @@ WHERE post = ?
             mentioned_posts,
         })
     }
+
+    pub async fn pin(id: u64, db: &mut PoolConnection<MySql>) -> Result<(), NotFound<Json<Value>>> {
+        Self::get(id, db).await?;
+        sqlx::query!(
+            "
+UPDATE posts
+SET pinned = TRUE
+WHERE id = ?
+            ",
+            id
+        )
+        .execute(db)
+        .await
+        .unwrap();
+        Ok(())
+    }
+
 }
