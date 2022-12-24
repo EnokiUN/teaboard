@@ -110,4 +110,25 @@ VALUES(?, ?)
         .unwrap();
         data
     }
+
+    pub async fn edit(
+        id: &str,
+        description: Option<String>,
+        db: &mut PoolConnection<MySql>,
+    ) -> Result<(), NotFound<Json<Value>>> {
+        Self::get(&id, &mut *db).await?;
+        sqlx::query!(
+            "
+UPDATE boards
+SET description = ?
+WHERE id = ?
+            ",
+            description,
+            id
+        )
+        .execute(db)
+        .await
+        .unwrap();
+        Ok(())
+    }
 }
