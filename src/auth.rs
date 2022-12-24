@@ -27,17 +27,19 @@ impl<'r> FromRequest<'r> for PasswordAuth {
     type Error = Infallible;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        match req.headers().get_one("Authorization") {
-            Some(password) => Outcome::Success(PasswordAuth {
-                admin: password
-                    == &req
+        Outcome::Success(PasswordAuth {
+            admin: req
+                .headers()
+                .get_one("Authorization")
+                .map(|p| {
+                    p == &req
                         .rocket()
                         .state::<Conf>()
                         .expect("Could not find instance config in rocket state")
-                        .password,
-            }),
-            None => Outcome::Success(PasswordAuth { admin: false }),
-        }
+                        .password
+                })
+                .unwrap_or(false),
+        })
     }
 }
 
