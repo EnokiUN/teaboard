@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use rocket::{
     http::Status,
     request::{FromRequest, Outcome, Request},
@@ -22,7 +24,7 @@ pub enum AuthError {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for PasswordAuth {
-    type Error = AuthError;
+    type Error = Infallible;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match req.headers().get_one("Authorization") {
@@ -34,7 +36,7 @@ impl<'r> FromRequest<'r> for PasswordAuth {
                         .expect("Could not find instance config in rocket state")
                         .password,
             }),
-            None => Outcome::Failure((Status::BadRequest, AuthError::AuthNotFound)),
+            None => Outcome::Success(PasswordAuth { admin: false }),
         }
     }
 }
