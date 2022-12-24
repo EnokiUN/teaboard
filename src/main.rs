@@ -16,7 +16,7 @@ use id::IdGen;
 use rocket::{
     data::{Limits, ToByteUnit},
     tokio::sync::Mutex,
-    Build, Config, Rocket,
+    Config,
 };
 use rocket_db_pools::{deadpool_redis::Pool, sqlx::MySqlPool, Database};
 
@@ -28,7 +28,7 @@ pub struct DB(MySqlPool);
 #[database("cache")]
 pub struct Cache(Pool);
 
-#[tokio::main]
+#[rocket::main]
 async fn main() -> Result<(), anyhow::Error> {
     dotenvy::dotenv().ok();
     env_logger::init();
