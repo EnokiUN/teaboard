@@ -89,6 +89,14 @@ impl Post {
                     Json(json!({"status": 404, "msg": "Unknown parent post"})),
                 )
             })?;
+            if parent.board != board.id {
+                return Err((
+                    Status::BadRequest,
+                    Json(
+                        json!({"status": 400, "msg": "You can't reply to a post on another board"}),
+                    ),
+                ));
+            }
             if parent.locked && !moderator {
                 return Err((
                     Status::Forbidden,
