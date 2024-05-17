@@ -20,7 +20,7 @@ pub async fn feed(
     ip: ClientIP,
 ) -> Response<Result<Json<Vec<PostInfo>>, NotFound<Json<Value>>>> {
     let mut ratelimiter =
-        Ratelimiter::new(&format!("feed-{}", board), ip, 5, Duration::from_secs(10));
+        Ratelimiter::new(&format!("feed-{}", board), ip, 20, Duration::from_secs(10));
     ratelimiter.process_ratelimit(&mut cache).await?;
     ratelimiter.wrap_response(
         Board::get_feed(board, before, limit, &mut db)

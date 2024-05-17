@@ -17,7 +17,7 @@ pub async fn index(
     ip: ClientIP,
     conf: &State<Conf>,
 ) -> Response<Json<InstanceInfo>> {
-    let mut ratelimiter = Ratelimiter::new("info", ip, 2, Duration::from_secs(10));
+    let mut ratelimiter = Ratelimiter::new("info", ip, 20, Duration::from_secs(10));
     ratelimiter.process_ratelimit(&mut cache).await?;
     ratelimiter.wrap_response(Json(InstanceInfo {
         info: conf.inner().clone(),

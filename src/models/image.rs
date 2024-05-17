@@ -35,7 +35,14 @@ impl Image {
     ) -> Result<Image, (Status, Json<Value>)> {
         let id = gen.lock().await.generate();
         let path = PathBuf::from(format!("./data/{}", id));
-        let name = image.name().unwrap().to_string();
+        let name = match image.raw_name() {
+            Some(name) => PathBuf::from(name.dangerous_unsafe_unsanitized_raw().as_str())
+                .file_name()
+                .map(|n| n.to_str().unwrap_or("attachment"))
+                .unwrap_or("attachment")
+                .to_string(),
+            None => "attachment".to_string(),
+        };
         image.persist_to(&path).await.unwrap();
         let data = tokio::fs::read(&path).await.unwrap();
 
@@ -137,7 +144,7 @@ WHERE id = ?
         .fetch_one(&mut **db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 400, "msg": "Image not found"}))))?;
-        let file = File::open(format!("data/{}", img.id)).await.unwrap();
+        let file = File::open(format!("data/{}", img.file_id)).await.unwrap();
         Ok(FetchResponse {
             file,
             disposition: Header::new(

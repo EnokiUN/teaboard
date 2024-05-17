@@ -18,7 +18,7 @@ pub async fn info(
     ip: ClientIP,
 ) -> Response<Result<Json<Board>, NotFound<Json<Value>>>> {
     let mut ratelimiter =
-        Ratelimiter::new(&format!("info-{}", board), ip, 5, Duration::from_secs(10));
+        Ratelimiter::new(&format!("info-{}", board), ip, 20, Duration::from_secs(10));
     ratelimiter.process_ratelimit(&mut cache).await?;
     ratelimiter.wrap_response(Board::get(board, &mut db).await.map(Json))
 }

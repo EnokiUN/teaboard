@@ -20,7 +20,6 @@ use crate::Cache;
 pub type Response<T> = Result<RatelimitWrapper<T>, RatelimitWrapper<TooManyRequests>>;
 
 #[derive(Debug, Responder)]
-#[response(content_type = "json")]
 pub struct RatelimitWrapper<T> {
     pub inner: T,
     pub ratelimit_reset: Header<'static>,

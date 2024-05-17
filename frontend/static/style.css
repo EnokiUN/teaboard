@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+  --black-100: #000919;
+  --black-200: #060319;
+  --white-100: #ced0ce66;
+  --white-200: #ced0ceaa;
+  --white-300: #ced0ceff;
+  --blue-200: #626cf8;
+  --red-200: #e3514f;
+  --green-200: #6ed89e;
+
+  --color-text: var(--white-300);
+  --color-bg: var(--black-100);
+}
+
+html {
+  min-width: 100%;
+  min-height: 100%;
+}
+
+body {
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Work Sans', sans-serif;
+  font-size: 18px;
+}
+
+a {
+  text-decoration: underline;
+  color: var(--gray-500);
+  transition: color ease-in-out 200ms;
+}
+
+a:hover {
+  color: var(--gray-400);
+}
+
+
+button:not([disabled]) {
+  cursor: pointer;
+}

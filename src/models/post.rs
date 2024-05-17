@@ -248,7 +248,7 @@ WHERE post = ?
         let post = Self::get(id, db).await?;
         let replies = sqlx::query_as(
             r#"
-SELECT *,
+SELECT *
 FROM posts
 WHERE parent = ?
 ORDER BY id ASC
