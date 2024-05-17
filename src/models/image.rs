@@ -7,14 +7,14 @@ use rocket::{
     serde::json::Json,
 };
 use serde_json::{json, Value};
-use sqlx::{pool::PoolConnection, MySql};
+use sqlx::{pool::PoolConnection, Sqlite};
 use tokio::{fs::File, sync::Mutex};
 
 use crate::id::IdGen;
 
 pub struct Image {
-    pub id: u64,
-    pub file_id: u64,
+    pub id: i64,
+    pub file_id: i64,
     pub name: String,
     pub content_type: String,
     pub hash: String,
@@ -31,7 +31,7 @@ impl Image {
     pub async fn create<'a>(
         mut image: TempFile<'a>,
         gen: &Mutex<IdGen>,
-        db: &mut PoolConnection<MySql>,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<Image, (Status, Json<Value>)> {
         let id = gen.lock().await.generate();
         let path = PathBuf::from(format!("./data/{}", id));
@@ -49,7 +49,7 @@ WHERE hash = ?
             ",
             hash,
         )
-        .fetch_one(&mut *db)
+        .fetch_one(&mut **db)
         .await
         {
             tokio::fs::remove_file(path).await.unwrap();
@@ -64,7 +64,7 @@ VALUES(?, ?, ?, ?, ?)
                 img.content_type,
                 hash
             )
-            .execute(&mut *db)
+            .execute(&mut **db)
             .await
             .unwrap();
 
@@ -111,7 +111,7 @@ VALUES(?, ?, ?, ?, ?)
                 img.content_type,
                 img.hash
             )
-            .execute(&mut *db)
+            .execute(&mut **db)
             .await
             .unwrap();
 
@@ -122,8 +122,8 @@ VALUES(?, ?, ?, ?, ?)
     }
 
     pub async fn get<'a>(
-        id: u64,
-        db: &mut PoolConnection<MySql>,
+        id: i64,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<FetchResponse<'a>, NotFound<Json<Value>>> {
         let img = sqlx::query_as!(
             Image,
@@ -134,7 +134,7 @@ WHERE id = ?
             ",
             id
         )
-        .fetch_one(db)
+        .fetch_one(&mut **db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 400, "msg": "Image not found"}))))?;
         let file = File::open(format!("data/{}", img.id)).await.unwrap();

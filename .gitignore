@@ -2,4 +2,7 @@
 .env
 dump.rdb
 data
+db.db
+db.db-wal
+db.db-shm
 Test.toml

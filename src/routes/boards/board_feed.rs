@@ -12,8 +12,8 @@ use crate::{
 
 #[get("/<board>/feed?<before>&<limit>")]
 pub async fn feed(
-    board: String,
-    before: Option<u64>,
+    board: &str,
+    before: Option<i64>,
     limit: Option<u32>,
     mut db: Connection<DB>,
     mut cache: Connection<Cache>,

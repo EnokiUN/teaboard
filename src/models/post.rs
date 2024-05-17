@@ -3,10 +3,11 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use rocket::{fs::TempFile, http::Status, response::status::NotFound, serde::json::Json};
-use rocket_db_pools::sqlx::{pool::PoolConnection, MySql};
+use rocket_db_pools::sqlx::{pool::PoolConnection, Sqlite};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use sqlx::{sqlite::SqliteRow, FromRow, Row};
 use tokio::sync::Mutex;
 
 use crate::id::IdGen;
@@ -18,7 +19,7 @@ use super::{Board, Image};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
     #[serde_as(as = "DisplayFromStr")]
-    pub id: u64,
+    pub id: i64,
     pub board: String,
     pub title: String,
     pub content: Option<String>,
@@ -29,9 +30,25 @@ pub struct Post {
     #[serde(skip_serializing_if = "is_false")]
     pub locked: bool,
     #[serde_as(as = "Option<DisplayFromStr>")]
-    pub parent: Option<u64>,
+    pub parent: Option<i64>,
     #[serde_as(as = "Option<DisplayFromStr>")]
-    pub image: Option<u64>,
+    pub image: Option<i64>,
+}
+
+impl FromRow<'_, SqliteRow> for Post {
+    fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+        Ok(Self {
+            id: row.get("id"),
+            board: row.get("board"),
+            title: row.get("title"),
+            content: row.get("content"),
+            pinned: row.get("pinned"),
+            moderator: row.get("moderator"),
+            locked: row.get("locked"),
+            parent: row.get("parent"),
+            image: row.get("image"),
+        })
+    }
 }
 
 #[serde_as]
@@ -41,9 +58,9 @@ pub struct PostInfo {
     pub post: Post,
     pub replies: Vec<Post>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub mentions: Vec<u64>,
+    pub mentions: Vec<i64>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub mentioned_posts: Vec<u64>,
+    pub mentioned_posts: Vec<i64>,
 }
 
 fn is_false(value: &bool) -> bool {
@@ -56,7 +73,7 @@ pub struct PostJson {
     pub title: String,
     pub content: Option<String>,
     #[serde_as(as = "Option<DisplayFromStr>")]
-    pub parent: Option<u64>,
+    pub parent: Option<i64>,
 }
 
 #[derive(Debug, FromForm)]
@@ -70,13 +87,13 @@ impl Post {
         board: Board,
         form: PostForm<'a>,
         gen: &Mutex<IdGen>,
-        db: &mut PoolConnection<MySql>,
+        db: &mut PoolConnection<Sqlite>,
         moderator: bool,
     ) -> Result<Post, (Status, Json<Value>)> {
         lazy_static! {
             pub static ref MENTION_REGEX: Regex = Regex::new(r">>(\d{9,12})").unwrap();
         }
-        let image: Option<u64> = match form.image {
+        let image: Option<i64> = match form.image {
             Some(image) => Some(Image::create(image, gen, &mut *db).await?.id),
             None => None,
         };
@@ -115,9 +132,9 @@ VALUES(?, ?, ?, ?, ?, ?, ?)
             post.content,
             moderator,
             post.parent,
-            image
+            image,
         )
-        .execute(&mut *db)
+        .execute(&mut **db)
         .await
         .unwrap();
         if let Some(content) = &post.content {
@@ -133,7 +150,7 @@ VALUES(?, ?)
                         post.id,
                         id
                     )
-                    .execute(&mut *db)
+                    .execute(&mut **db)
                     .await
                     .unwrap();
                 }
@@ -153,40 +170,38 @@ VALUES(?, ?)
     }
 
     pub async fn get(
-        id: u64,
-        db: &mut PoolConnection<MySql>,
+        id: i64,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<Post, NotFound<Json<Value>>> {
         // https://github.com/launchbadge/sqlx/issues/877
-        sqlx::query_as!(
-            Self,
+        sqlx::query_as(
             r#"
-SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
+SELECT *
 FROM posts
 WHERE id = ?
             "#,
-            id
         )
-        .fetch_one(db)
+        .bind(id)
+        .fetch_one(&mut **db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))
     }
 
     pub async fn info(
-        id: u64,
-        db: &mut PoolConnection<MySql>,
+        id: i64,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<PostInfo, NotFound<Json<Value>>> {
         let post = Self::get(id, db).await?;
-        let replies = sqlx::query_as!(
-            Self,
+        let replies = sqlx::query_as(
             r#"
-SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
+SELECT *
 FROM posts
 WHERE parent = ?
 ORDER BY id ASC
             "#,
-            id
         )
-        .fetch_all(&mut *db)
+        .bind(id)
+        .fetch_all(&mut **db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
         let mentions = sqlx::query!(
@@ -197,7 +212,7 @@ WHERE mentioned_post = ?
             ",
             id
         )
-        .fetch_all(&mut *db)
+        .fetch_all(&mut **db)
         .await
         .unwrap()
         .into_iter()
@@ -211,7 +226,7 @@ WHERE post = ?
             ",
             id
         )
-        .fetch_all(db)
+        .fetch_all(&mut **db)
         .await
         .unwrap()
         .into_iter()
@@ -227,22 +242,21 @@ WHERE post = ?
     }
 
     pub async fn partial_info(
-        id: u64,
-        db: &mut PoolConnection<MySql>,
+        id: i64,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<PostInfo, NotFound<Json<Value>>> {
         let post = Self::get(id, db).await?;
-        let replies = sqlx::query_as!(
-            Self,
+        let replies = sqlx::query_as(
             r#"
-SELECT id, board, title, content, pinned as "pinned: _", moderator as "moderator: _", locked as "locked: _", parent, image
+SELECT *,
 FROM posts
 WHERE parent = ?
 ORDER BY id ASC
 LIMIT 5
             "#,
-            id
         )
-        .fetch_all(&mut *db)
+        .bind(id)
+        .fetch_all(&mut **db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown post"}))))?;
         let mentions = sqlx::query!(
@@ -253,7 +267,7 @@ WHERE mentioned_post = ?
             ",
             id
         )
-        .fetch_all(&mut *db)
+        .fetch_all(&mut **db)
         .await
         .unwrap()
         .into_iter()
@@ -267,7 +281,7 @@ WHERE post = ?
             ",
             id
         )
-        .fetch_all(db)
+        .fetch_all(&mut **db)
         .await
         .unwrap()
         .into_iter()
@@ -282,7 +296,10 @@ WHERE post = ?
         })
     }
 
-    pub async fn pin(id: u64, db: &mut PoolConnection<MySql>) -> Result<(), NotFound<Json<Value>>> {
+    pub async fn pin(
+        id: i64,
+        db: &mut PoolConnection<Sqlite>,
+    ) -> Result<(), NotFound<Json<Value>>> {
         Self::get(id, db).await?;
         sqlx::query!(
             "
@@ -292,15 +309,15 @@ WHERE id = ?
             ",
             id
         )
-        .execute(db)
+        .execute(&mut **db)
         .await
         .unwrap();
         Ok(())
     }
 
     pub async fn lock(
-        id: u64,
-        db: &mut PoolConnection<MySql>,
+        id: i64,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<(), NotFound<Json<Value>>> {
         Self::get(id, db).await?;
         sqlx::query!(
@@ -311,7 +328,7 @@ WHERE id = ?
             ",
             id
         )
-        .execute(db)
+        .execute(&mut **db)
         .await
         .unwrap();
         Ok(())

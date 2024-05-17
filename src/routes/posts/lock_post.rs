@@ -6,7 +6,7 @@ use crate::{auth::StrictPasswordAuth, models::Post, DB};
 
 #[post("/posts/<id>/lock")]
 pub async fn lock(
-    id: u64,
+    id: i64,
     mut db: Connection<DB>,
     _auth: StrictPasswordAuth,
 ) -> Result<(), NotFound<Json<Value>>> {

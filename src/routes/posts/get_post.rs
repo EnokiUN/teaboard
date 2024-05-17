@@ -12,7 +12,7 @@ use crate::{
 
 #[get("/posts/<id>")]
 pub async fn get(
-    id: u64,
+    id: i64,
     mut db: Connection<DB>,
     mut cache: Connection<Cache>,
     ip: ClientIP,

@@ -1,5 +1,5 @@
 use rocket::{response::status::NotFound, serde::json::Json};
-use rocket_db_pools::sqlx::{pool::PoolConnection, MySql};
+use rocket_db_pools::sqlx::{pool::PoolConnection, Sqlite};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -14,7 +14,7 @@ pub struct Board {
 impl Board {
     pub async fn get(
         id: &str,
-        db: &mut PoolConnection<MySql>,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<Self, NotFound<Json<Value>>> {
         sqlx::query_as!(
             Board,
@@ -24,32 +24,32 @@ FROM boards
 WHERE id = ?",
             id
         )
-        .fetch_one(db)
+        .fetch_one(&mut **db)
         .await
         .map_err(|_| NotFound(Json(json!({"status": 404, "msg": "Unknown board"}))))
     }
 
-    pub async fn all(db: &mut PoolConnection<MySql>) -> Vec<Board> {
+    pub async fn all(db: &mut PoolConnection<Sqlite>) -> Vec<Board> {
         sqlx::query_as!(
             Self,
             "
 SELECT * FROM boards
             "
         )
-        .fetch_all(db)
+        .fetch_all(&mut **db)
         .await
         .unwrap()
     }
 
     pub async fn get_feed(
-        id: String,
-        before: Option<u64>,
+        id: &str,
+        before: Option<i64>,
         limit: Option<u32>,
-        db: &mut PoolConnection<MySql>,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<Vec<PostInfo>, NotFound<Json<Value>>> {
-        let board = Self::get(&id, &mut *db).await?;
+        let board = Self::get(id, &mut *db).await?;
         let limit = limit.unwrap_or(10);
-        let posts: Vec<u64> = match before {
+        let posts: Vec<i64> = match before {
             Some(before) => sqlx::query!(
                 r#"
 SELECT id
@@ -64,7 +64,7 @@ LIMIT ?
                 before,
                 limit
             )
-            .fetch_all(&mut *db)
+            .fetch_all(&mut **db)
             .await
             .unwrap()
             .iter()
@@ -82,7 +82,7 @@ LIMIT ?
                 board.id,
                 limit
             )
-            .fetch_all(&mut *db)
+            .fetch_all(&mut **db)
             .await
             .unwrap()
             .iter()
@@ -96,7 +96,7 @@ LIMIT ?
         Ok(infos)
     }
 
-    pub async fn create(data: Self, db: &mut PoolConnection<MySql>) -> Self {
+    pub async fn create(data: Self, db: &mut PoolConnection<Sqlite>) -> Self {
         sqlx::query!(
             "
 INSERT INTO boards(id, description)
@@ -105,7 +105,7 @@ VALUES(?, ?)
             data.id,
             data.description,
         )
-        .execute(db)
+        .execute(&mut **db)
         .await
         .unwrap();
         data
@@ -114,9 +114,9 @@ VALUES(?, ?)
     pub async fn edit(
         id: &str,
         description: Option<String>,
-        db: &mut PoolConnection<MySql>,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<(), NotFound<Json<Value>>> {
-        Self::get(&id, &mut *db).await?;
+        Self::get(id, &mut *db).await?;
         sqlx::query!(
             "
 UPDATE boards
@@ -126,7 +126,7 @@ WHERE id = ?
             description,
             id
         )
-        .execute(db)
+        .execute(&mut **db)
         .await
         .unwrap();
         Ok(())
@@ -134,9 +134,9 @@ WHERE id = ?
 
     pub async fn delete(
         id: &str,
-        db: &mut PoolConnection<MySql>,
+        db: &mut PoolConnection<Sqlite>,
     ) -> Result<(), NotFound<Json<Value>>> {
-        Self::get(&id, &mut *db).await?;
+        Self::get(id, &mut *db).await?;
         sqlx::query!(
             "
 DELETE FROM posts
@@ -144,7 +144,7 @@ WHERE board = ?
             ",
             id
         )
-        .execute(&mut *db)
+        .execute(&mut **db)
         .await
         .unwrap();
         sqlx::query!(
@@ -154,7 +154,7 @@ WHERE id = ?
             ",
             id
         )
-        .execute(db)
+        .execute(&mut **db)
         .await
         .unwrap();
         Ok(())

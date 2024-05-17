@@ -12,7 +12,7 @@ use crate::{
 
 #[get("/images/<id>")]
 pub async fn fetch_image<'a>(
-    id: u64,
+    id: i64,
     mut db: Connection<DB>,
     mut cache: Connection<Cache>,
     ip: ClientIP,

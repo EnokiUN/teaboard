@@ -19,11 +19,11 @@ use rocket::{
     tokio::sync::Mutex,
     Config,
 };
-use rocket_db_pools::{deadpool_redis::Pool, sqlx::MySqlPool, Database};
+use rocket_db_pools::{deadpool_redis::Pool, sqlx::SqlitePool, Database};
 
 #[derive(Database)]
 #[database("db")]
-pub struct DB(MySqlPool);
+pub struct DB(SqlitePool);
 
 #[derive(Database)]
 #[database("cache")]
@@ -46,7 +46,10 @@ async fn main() -> Result<(), anyhow::Error> {
             "databases.db",
             rocket_db_pools::Config {
                 url: env::var("DATABASE_URL")
-                    .context("Could not find \"DATABASE_URL\" environment variable")?,
+                    .context("Could not find \"DATABASE_URL\" environment variable")?
+                    .strip_prefix("sqlite:")
+                    .context("Failed to strip prefix from \"DATABASE_URL\" environment variable")?
+                    .to_string(),
                 min_connections: None,
                 max_connections: 1024,
                 connect_timeout: 3,

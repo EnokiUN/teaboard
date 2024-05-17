@@ -8,7 +8,7 @@ impl IdGen {
     pub fn new() -> Self {
         Self { counter: 0 }
     }
-    pub fn generate(&mut self) -> u64 {
+    pub fn generate(&mut self) -> i64 {
         if self.counter == u8::MAX {
             self.counter = 0
         } else {
@@ -19,10 +19,10 @@ impl IdGen {
         (SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or(Duration::ZERO)
-            .as_secs()
+            .as_secs() as i64
             & 0xFFFFFF)
             << 8
-            | (self.counter as u64)
+            | (self.counter as i64)
     }
 }
 
@@ -30,7 +30,7 @@ impl IdGen {
 mod test {
     use super::IdGen;
 
-    fn extract_components(id: u64) -> (u64, u8) {
+    fn extract_components(id: i64) -> (i64, u8) {
         (id >> 8, (id & 0xFF) as u8)
     }
 

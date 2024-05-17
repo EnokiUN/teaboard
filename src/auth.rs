@@ -32,7 +32,7 @@ impl<'r> FromRequest<'r> for PasswordAuth {
                 .headers()
                 .get_one("Authorization")
                 .map(|p| {
-                    p == &req
+                    p == req
                         .rocket()
                         .state::<Conf>()
                         .expect("Could not find instance config in rocket state")
@@ -51,7 +51,7 @@ impl<'r> FromRequest<'r> for StrictPasswordAuth {
         match req.headers().get_one("Authorization") {
             Some(password) => {
                 if password
-                    == &req
+                    == req
                         .rocket()
                         .state::<Conf>()
                         .expect("Could not find instance config in rocket state")
@@ -59,10 +59,10 @@ impl<'r> FromRequest<'r> for StrictPasswordAuth {
                 {
                     Outcome::Success(StrictPasswordAuth)
                 } else {
-                    Outcome::Failure((Status::Forbidden, AuthError::Unauthorised))
+                    Outcome::Error((Status::Forbidden, AuthError::Unauthorised))
                 }
             }
-            None => Outcome::Failure((Status::BadRequest, AuthError::AuthNotFound)),
+            None => Outcome::Error((Status::BadRequest, AuthError::AuthNotFound)),
         }
     }
 }
