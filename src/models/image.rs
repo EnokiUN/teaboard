@@ -84,7 +84,10 @@ VALUES(?, ?, ?, ?, ?)
             }
         } else {
             let img = tokio::task::spawn_blocking(move || {
-                let mime = tree_magic::from_u8(&data);
+                let mut mime = tree_magic::from_u8(&data);
+                if mime == "application/x-riff" && name.ends_with(".webp") { // tree magic bug
+                    mime = "image/webp".to_string();
+                }
                 match mime.as_ref() {
                     "image/gif" | "image/jpeg" | "image/png" => {
                         let metadata = rexiv2::Metadata::new_from_buffer(&data).unwrap();

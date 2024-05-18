@@ -33,6 +33,7 @@
     width: 100%;
     text-decoration: none;
     padding: 10px;
+    gap: 10px;
   }
 
   .post-text {

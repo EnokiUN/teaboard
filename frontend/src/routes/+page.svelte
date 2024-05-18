@@ -84,4 +84,10 @@
     padding: 30px;
     text-decoration: none;
   }
+
+  @media only screen and (max-width: 1200px) {
+    .board-card {
+      width: 90vw;
+    }
+  }
 </style>
