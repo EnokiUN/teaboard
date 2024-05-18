@@ -50,7 +50,11 @@
 </script>
 
 <form on:submit|preventDefault={createPost} id="post-form">
-  <h3>Create a Post</h3>
+  {#if parentPost}
+    <h3>Create a Reply</h3>
+  {:else}
+    <h3>Create a Post</h3>
+  {/if}
   <input
     bind:value={postTitle}
     name="post-title"
