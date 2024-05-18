@@ -22,7 +22,7 @@ pub async fn new<'a>(
     ip: ClientIP,
     auth: PasswordAuth,
 ) -> Response<Result<Json<Post>, (Status, Json<Value>)>> {
-    let mut ratelimiter = Ratelimiter::new("create-post", ip, 1, Duration::from_secs(30));
+    let mut ratelimiter = Ratelimiter::new("create-post", ip, 5, Duration::from_secs(10));
     if !auth.admin {
         ratelimiter.process_ratelimit(&mut cache).await?;
     }

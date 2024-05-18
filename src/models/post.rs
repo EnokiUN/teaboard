@@ -197,7 +197,7 @@ WHERE id = ?
 SELECT *
 FROM posts
 WHERE parent = ?
-ORDER BY id ASC
+ORDER BY id DESC
             "#,
         )
         .bind(id)
@@ -251,7 +251,7 @@ WHERE post = ?
 SELECT *
 FROM posts
 WHERE parent = ?
-ORDER BY id ASC
+ORDER BY id DESC
 LIMIT 5
             "#,
         )

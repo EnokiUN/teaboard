@@ -1,10 +1,16 @@
 <script lang="ts">
-  import { API_URL } from '$lib/request';
   import Markdown from '$lib/Markdown.svelte';
   import type { PageData } from './$types';
+  import Post from '$lib/Post.svelte';
+  import PostForm from '$lib/PostForm.svelte';
 
   export let data: PageData;
 </script>
+
+<a href="/" id="logo">
+  <img src="/logo.svg" alt="Logo" id="logo-image" />
+  Home
+</a>
 
 <div id="board-info">
   <h1 id="board-name">/{data.board.id}/</h1>
@@ -17,42 +23,18 @@
 
 <div id="content">
   <div id="posts">
+    <PostForm board={data.board.id} />
+    <hr />
     {#each data.posts as post (post.id)}
       <div class="post">
         <a class="post-link" href="/posts/{post.id}">
-          <div class="post-card">
-            <span class="post-id">
-              {post.id}
-            </span>
-            <h3>
-              <Markdown content={post.title} />
-            </h3>
-            {#if post.content}
-              <Markdown content={post.content} />
-            {/if}
-            {#if post.image}
-              <img class="post-image" src="{API_URL}/images/{post.image}" alt="" />
-            {/if}
-          </div>
+          <Post {post} />
         </a>
         {#if post.replies.length}
           <div class="post-replies">
             {#each post.replies as reply (reply.id)}
               <a class="post-link" href="/posts/{reply.id}">
-                <div class="post-card">
-                  <span class="post-id">
-                    {reply.id}
-                  </span>
-                  <h3>
-                    <Markdown content={reply.title} />
-                  </h3>
-                  {#if reply.content}
-                    <Markdown content={reply.content} />
-                  {/if}
-                  {#if reply.image}
-                    <img class="post-image" src="{API_URL}/images/{reply.image}" alt="" />
-                  {/if}
-                </div>
+                <Post post={reply} />
               </a>
             {/each}
             {#if post.replies.length >= 5}
@@ -82,6 +64,19 @@
 </div>
 
 <style>
+  #logo {
+    display: flex;
+    margin: 10px 0 0 10px;
+    align-items: center;
+    gap: 10px;
+    text-decoration: 0;
+    font-weight: bold;
+  }
+
+  #logo-image {
+    width: 40px;
+  }
+
   #board-info {
     box-sizing: border-box;
     display: flex;
@@ -111,6 +106,10 @@
     gap: 10px;
   }
 
+  hr {
+    width: 90%;
+  }
+
   #boards {
     flex-grow: 1;
     display: flex;
@@ -129,6 +128,7 @@
     width: calc(100% - 20px);
     margin-right: 20px;
   }
+
   .board-card h3 {
     margin: 5px;
   }
@@ -143,30 +143,12 @@
     flex-direction: column;
   }
 
-  .post-card {
-    box-sizing: border-box;
-    background-color: var(--black-200);
-    border: 2px solid var(--white-100);
-    border-radius: 10px;
-    width: 100%;
-    text-decoration: none;
-    padding: 10px;
-  }
-
   .post-replies {
     box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
     margin: 10px 20px;
     gap: 10px;
-  }
-
-  .post-card h3 {
-    margin-top: 0;
-  }
-
-  .post-id {
-    font-size: 16px;
   }
 
   .post-link {
@@ -177,17 +159,13 @@
     width: 100%;
   }
 
-  .post-image {
-    margin-top: 20px;
-  }
-
   @media only screen and (max-width: 1200px) {
     #content {
       flex-direction: column;
     }
 
     #posts {
-      width: fit-content;
+      width: calc(100% - 40px);
     }
 
     #boards h2 {

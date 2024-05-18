@@ -1,47 +1,28 @@
 <script lang="ts">
   import Markdown from '$lib/Markdown.svelte';
-  import { API_URL } from '$lib/request';
+  import Post from '$lib/Post.svelte';
+  import PostForm from '$lib/PostForm.svelte';
   import type { PageData } from './$types';
 
   export let data: PageData;
 </script>
 
-<div class="post">
-  <div id="main-post" class="post-card">
-    <span class="post-id">
-      {data.post.id}
-    </span>
-    <h3>
-      <Markdown content={data.post.title} />
-    </h3>
-    {#if data.post.content}
-      <Markdown content={data.post.content} />
-    {/if}
-    {#if data.post.image}
-      <img class="post-image" src="{API_URL}/images/{data.post.image}" alt="" />
-    {/if}
-  </div>
+<a href="/" id="logo">
+  <img src="/logo.svg" alt="Logo" id="logo-image" />
+  Home
+</a>
+
+<div id="main-post">
+  <Post post={data.post} />
 </div>
 <img id="curves" src="/waves.svg" alt="waves" />
 <div id="content">
   <div id="posts">
+    <PostForm board={data.post.board} parentPost={data.post.id} />
     {#each data.post.replies as post (post.id)}
       <div class="post">
         <a class="post-link" href="/posts/{post.id}">
-          <div class="post-card">
-            <span class="post-id">
-              {post.id}
-            </span>
-            <h3>
-              <Markdown content={post.title} />
-            </h3>
-            {#if post.content}
-              <Markdown content={post.content} />
-            {/if}
-            {#if post.image}
-              <img class="post-image" src="{API_URL}/images/{post.image}" alt="" />
-            {/if}
-          </div>
+          <Post {post} />
         </a>
       </div>
     {/each}
@@ -65,6 +46,19 @@
 </div>
 
 <style>
+  #logo {
+    display: flex;
+    margin: 10px 0 0 10px;
+    align-items: center;
+    gap: 10px;
+    text-decoration: 0;
+    font-weight: bold;
+  }
+
+  #logo-image {
+    width: 40px;
+  }
+
   #main-post {
     width: 80vw;
     margin: 20px auto;
@@ -99,6 +93,7 @@
     width: calc(100% - 20px);
     margin-right: 20px;
   }
+
   .board-card h3 {
     margin: 5px;
   }
@@ -113,30 +108,8 @@
     flex-direction: column;
   }
 
-  .post-card {
-    box-sizing: border-box;
-    background-color: var(--black-200);
-    border: 2px solid var(--white-100);
-    border-radius: 10px;
-    width: 100%;
-    text-decoration: none;
-    padding: 10px;
-  }
-
-  .post-card h3 {
-    margin-top: 0;
-  }
-
-  .post-id {
-    font-size: 16px;
-  }
-
   .post-link {
     text-decoration: none;
-  }
-
-  .post-image {
-    margin-top: 20px;
   }
 
   @media only screen and (max-width: 1200px) {
@@ -145,7 +118,7 @@
     }
 
     #posts {
-      width: fit-content;
+      width: calc(100% - 40px);
     }
 
     #boards h2 {
